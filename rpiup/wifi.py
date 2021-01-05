@@ -1,25 +1,9 @@
-# # On mac:
-# SD_PATH=/Volumes/boot
-# DEFAULT_AP=s0nycL1f3l1ne
-#
-# # enable ssh
-# touch "${SD_PATH}/ssh"
-#
-# # add a flag so we know to setup this device
-# touch "${SD_PATH}/SONYC_SETUP"
-#
-# # Download the wifi config from this url to `$SD_PATH/wpa_supplicant.conf`:
-# cd $THE_SONYCNODE_GIT_REPO_DIR
-# cp sonycnode/network/aps/${DEFAULT_AP}.conf $SD_PATH/wpa_supplicant.conf # cmd-V
-#
 import os
 import glob
 import shutil
 
 
-DEFAULT_AP = 's0nycL1f3l1ne'
 WIFI_CACHE = os.path.expanduser('~/.rpiup/wifi')
-AP_DIR = 'sonycnode/network/aps/'
 
 
 def add(ssid=None, password=None, path='.', default=False, country='US', remember=False):

@@ -41,7 +41,7 @@ if [ -z "$(status.list new-user)" ]; then
     section "Setting user to $USERNAME:$PASSWORD ..."
     if [ ! -z "$USERNAME" ] && [ ! -d "/home/$USERNAME" ]; then
         adduser --disabled-password --gecos '' $USERNAME
-        usermod -aG "$(id -Gn pi | sed -e 's/ /,/g')" sonyc
+        usermod -aG "$(id -Gn pi | sed -e 's/ /,/g')" $USERNAME
         passwd --lock pi
         echo "Current user: $USER"
     fi
