@@ -3,7 +3,7 @@ import re
 import subprocess
 
 
-DEFAULT_SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), '../boot-files'))
+DEFAULT_SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), 'boot-files'))
 
 
 def count(start=0, end=None, step=1):
