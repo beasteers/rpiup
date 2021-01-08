@@ -65,9 +65,9 @@ class Vars:
     def set(self, *args, **kw):
         return self.parse_string(*args, **kw) if args else self.prompt_any(**kw)
 
-    def prompt(self, name, desc='', default=None, value=None, secret=False, update=True):
+    def prompt(self, name, desc='', default=None, value=None, secret=False, update=True, ask=True):
         '''Prompt user for a specific variable.'''
-        if value is None:
+        if value is None and ask:
             print('*'*20)
             default = self.config.get(name) or default
             while True:
@@ -80,18 +80,19 @@ class Vars:
             self.update(**{name: value or default})
         return value or default
 
-    def prompt_any(self, n=None, **kw):
+    def prompt_any(self, n=None, ask=True, **kw):
         '''Prompt user for arbitrary KEY=VALUE pairs to store on the sd card.'''
-        print('*** Enter variables to store (KEY=VALUE): ***')
-        for i in util.count(n):
-            inp = input('... ')
-            if not inp:
-                break
-            parts = inp.split('=', 1)
-            if len(parts) != 2:
-                print('*** ERROR - Input {} must be of the format KEY=VALUE ***'.format(inp))
-                continue
-            kw[parts[0]] = parts[1]
+        if ask:
+            print('*** Enter variables to store (KEY=VALUE): ***')
+            for i in util.count(n):
+                inp = input('... ')
+                if not inp:
+                    break
+                parts = inp.split('=', 1)
+                if len(parts) != 2:
+                    print('*** ERROR - Input {} must be of the format KEY=VALUE ***'.format(inp))
+                    continue
+                kw[parts[0]] = parts[1]
         return self.update(kw)
 
     def parse_string(self, *args, **kw):

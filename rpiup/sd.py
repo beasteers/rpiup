@@ -12,7 +12,7 @@ def ssh_file(path):
 
 DEFAULT_SD_PATH = '/Volumes/boot'
 
-def setup(path='.', sd_path=DEFAULT_SD_PATH, uuid=None, hostname=None, **kw):
+def setup(path='.', sd_path=DEFAULT_SD_PATH, uuid=None, hostname=None, yes=False, y=False, **kw):
     '''You've just flashed a fresh raspbian verson.
 
     Now you want to:
@@ -31,22 +31,28 @@ def setup(path='.', sd_path=DEFAULT_SD_PATH, uuid=None, hostname=None, **kw):
 
     '''
     try:
+        yes = yes or y
         if not os.path.exists(sd_path):
             print('*** ERROR - No SD Card found at {} ***'.format(sd_path))
             return
 
         print('Copying over boot files...')
-        util.copytree(path, sd_path)
+        mod_dir = os.path.join(path, 'custom')
+        util.copytree(path, sd_path, ignore=lambda *x: [mod_dir])
+        # if os.path.exists(mod_dir):
+        #     print('Copying overrides from mod_dir...')
+        #     util.copytree(mod_dir, sd_path, ignore=['vars.sh'], overwrite=True)  # separate overwrites
+
         print()
 
         var = varsfile.Vars(os.path.join(sd_path, 'resources'))
         var.update(kw)
         hostname_prefix = '{}node'.format(var.get('APP_NAME'))
-        var.prompt('UUID', 'Do you want to set a deployment UUID? This can be used to tie status messages to specific hardware.', '', uuid)
-        var.prompt('hostname', 'Do you want to set the device hostname? (default: {}-$MAC_ADDR)'.format(hostname_prefix), '', hostname)
+        var.prompt('UUID', 'Do you want to set a deployment UUID? This can be used to tie status messages to specific hardware.', '', uuid, ask=not yes)
+        var.prompt('hostname', 'Do you want to set the device hostname? (default: {}-$MAC_ADDR)'.format(hostname_prefix), '', hostname, ask=not yes)
         if hostname is False or not var.get('hostname'):
-            var.prompt('hostname_prefix', 'Do you want to change the device hostname prefix? (default: {})'.format(hostname_prefix), '')
-        var.prompt_any()
+            var.prompt('hostname_prefix', 'Do you want to change the device hostname prefix? (default: {})'.format(hostname_prefix), '', ask=not yes)
+        var.prompt_any(ask=not yes)
 
         print('Please eject the SD card, insert it into your Pi, and start up!')
     except KeyboardInterrupt:

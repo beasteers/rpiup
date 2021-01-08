@@ -98,6 +98,7 @@ def max_common_prefix(*strs):
 
 
 def copytree(src, dst, symlinks=False, ignore=None, overwrite=None):
+    '''Copies, but won't overwrite if a newer file exists.'''
     import shutil
     if not os.path.exists(dst):
         os.makedirs(dst)
