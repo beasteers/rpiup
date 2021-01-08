@@ -1,13 +1,13 @@
 
 
-tobashrc() {
+bashrc.add() {
     grep -Fxq "$@" /etc/bash.bashrc && echo "$@" >> /etc/bash.bashrc
     $@
 }
 
 # setup, load variables
 export BOOT_VARS_FILE='/boot/resources/vars.sh'
-tobashrc . $BOOT_VARS_FILE
+bashrc.add . $BOOT_VARS_FILE
 
 bootvars.add() {
     sed -i -n -e '/^export '"$1"'=/!p' -e '$a'"export $1=$2" "$BOOT_VARS_FILE"
@@ -19,7 +19,7 @@ bootvars.remove() {
 
 
 # print section header
-section() {
+echo.section() {
     echo
     echo '****************************'
     echo ${@}
@@ -28,7 +28,7 @@ section() {
 }
 
 # copy a file, but make a backup of an existing file
-backupcp() {
+cp.backup() {
     if [ -f "$1" ]; then
         [ -f "$2" ] && mv "$2" "${2}.old"
         DIR=$(dirname $(readlink -m "$2"))

@@ -38,7 +38,7 @@ fi
 # create user
 
 if [ -z "$(status.list new-user)" ]; then
-    section "Setting user to $USERNAME:$PASSWORD ..."
+    echo.section "Setting user to $USERNAME:$PASSWORD ..."
     if [ ! -z "$USERNAME" ] && [ ! -d "/home/$USERNAME" ]; then
         adduser --disabled-password --gecos '' $USERNAME
         usermod -aG "$(id -Gn pi | sed -e 's/ /,/g')" $USERNAME
@@ -60,16 +60,17 @@ fi
 # set hostname
 
 if [ -z "$(status.list hostname)" ]; then
-    if [ -z "$firstboot_hostname" ]; then
+    FIRSTBOOT_HOSTNAME=${FIRSTBOOT_HOSTNAME:-firstboot_hostname}  # deprecate old
+    if [ -z "$FIRSTBOOT_HOSTNAME" ]; then
         MAC=$(cat /sys/class/net/eth0/address | sed 's/://g')
         HOSTNAME_PREFIX="${HOSTNAME_PREFIX:-${APP_NAME}node}"
-        firstboot_hostname="${HOSTNAME_PREFIX}-${MAC}"
+        FIRSTBOOT_HOSTNAME="${HOSTNAME_PREFIX}-${MAC}"
     fi
-    section "Setting hostname to $firstboot_hostname ..."
+    echo.section "Setting hostname to $FIRSTBOOT_HOSTNAME ..."
 
-    echo "$firstboot_hostname" > /etc/hostname
-    sed -i "s/raspberrypi/$firstboot_hostname/g" /etc/hosts
-    hostname "$firstboot_hostname"
+    echo "$FIRSTBOOT_HOSTNAME" > /etc/hostname
+    sed -i "s/raspberrypi/$FIRSTBOOT_HOSTNAME/g" /etc/hosts
+    hostname "$FIRSTBOOT_HOSTNAME"
 
     status.update hostname
 fi
@@ -96,9 +97,9 @@ fi
 
 if [ -z "$(status.list etc)" ]; then
     # set network interfaces
-    backupcp /boot/resources/network_interfaces /etc/network/interfaces
+    cp.backup /boot/resources/network_interfaces /etc/network/interfaces
     # set fstab
-    backupcp /boot/resources/fstab /etc/fstab
+    cp.backup /boot/resources/fstab /etc/fstab
 
     status.update etc
 fi
@@ -106,7 +107,7 @@ fi
 
 if [ -z "$(status.list installs)" ]; then
     # install htop wavemon
-    section "Installing core packages..."
+    echo.section "Installing core packages..."
     apt-get update
 
     # # set date and timezone
@@ -130,18 +131,18 @@ fi
 
 # set splash image
 if [ -f /boot/resources/splash.png ]; then
-    section "Installing splash image..."
+    echo.section "Installing splash image..."
     apt-get install -y fbi
-    backupcp /boot/resources/.internal/splashscreen.service /etc/systemd/system/splashscreen.service
+    cp.backup /boot/resources/.internal/splashscreen.service /etc/systemd/system/splashscreen.service
     systemctl enable splashscreen
     # systemctl start splashscreen
 fi
-# backupcp /boot/resources/splash.png /usr/share/plymouth/themes/pix/splash.png
+# cp.backup /boot/resources/splash.png /usr/share/plymouth/themes/pix/splash.png
 
 
 # install python 3 and make it the default
 if [ -z "$(status.list install-python)" ]; then
-    section "Installing Python 3..."
+    echo.section "Installing Python 3..."
 
     apt-get install -y python3 python3-pip
     update-alternatives --install /usr/bin/python python /usr/bin/python3 4
@@ -155,7 +156,7 @@ fi
 
 # upgrade wifi device
 if [ -z "$(status.list wifi-drivers)" ]; then
-    section "Installing wifi devices..."
+    echo.section "Installing wifi devices..."
 
     wget http://downloads.fars-robotics.net/wifi-drivers/install-wifi -O /usr/bin/install-wifi
     chmod +x /usr/bin/install-wifi
@@ -168,9 +169,19 @@ fi
 
 # install docker, docker-compose
 if [ -z "$(status.list docker)" ]; then
-    section "Installing docker..."
+    echo.section "Installing docker..."
 
-    curl -sSL https://get.docker.com | sh
+    if [ $BALENA_ENGINE -eq 1 ]; then
+        . /boot/resources/.internal/balena-engine-install
+        _balen_url='https://gist.githubusercontent.com/beasteers/5a2b69e0b486d57039a52f5ee205cea8/raw/ceab766069dabeba16352f5012f6f26e30cae094/balena-engine-install.sh'
+        curl -sSL $_balen_url | sh
+        bashrc.add 'export DOCKER_HOST=unix:///var/run/balena-engine.sock'
+        bashrc.add 'alias docker=balena-engine'
+    else
+        curl -sSL https://get.docker.com | sh
+    fi
+
+    # install docker-compose
     [ ! -z $USERNAME ] && usermod -aG docker $USERNAME
     /usr/bin/python3 -m pip install docker-compose
     systemctl restart docker
@@ -181,14 +192,13 @@ fi
 
 # install systemctl services
 if [ -z "$(status.list systemctl-services)" ]; then
-    section "Installing any systemctl services..."
+    echo.section "Installing any systemctl services..."
 
     CWD=$(pwd)
     for svc_dir in /boot/resources/services/*; do
         cd "$svc_dir"
-        if [ -f "./install.sh" ]; then
-            ./install.sh
-        fi
+        [ -f "./install.sh" ] && ./install.sh
+
         # start
         svc_name=$(basename "$svc_dir")
         echo "starting service "$svc_name" and setting to run on boot..."
@@ -207,7 +217,7 @@ fi
 
 # install docker containers
 if [ -z "$(status.list docker-compose)" ]; then
-    section "Installing any docker containers..."
+    echo.section "Installing any docker containers..."
 
     CWD=$(pwd)
     for svc_dir in /boot/resources/docker/*; do
@@ -227,7 +237,7 @@ if [ -z "$(status.list custom-setup)" ]; then
     status.update custom-setup
 fi
 
-section "Done! Enjoy!! Don't be evil. **Do** topple capitalism. :D"
+echo.section "Done! Enjoy!! Don't be evil. **Do** topple capitalism. :D"
 status.update "done"
 
 # sleep 5
