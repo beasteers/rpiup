@@ -72,11 +72,15 @@ And then eject the SD card and put it in your pi!
             # if set(util.check_json_response('http://{}'.format(host)) or ()) == {'message'}:
             var.update(MONITOR_HOST=host)
 
-        if ssh:  # set ssh
-            sd.ssh_file(path)
+        # set device flags
+        sd.flag_file(path, 'ssh', ssh)
+        # sd.flag_file(path, 'i2c', var.prompt('Would you like to enable i2c?'))
+        # sd.flag_file(path, 'serial', var.prompt('Would you like to enable serial?'))
+        # sd.flag_file(path, 'i2s', var.prompt('Would you like to install i2s software?'))
+        # sd.flag_file(path, 'vnc', var.prompt('Would you like to enable vnc for remote GUI?'))
 
         # add default wifi
-        wifi.add(ssid, psk, path=path, remember=None)
+        wifi.add(ssid, psk, path=path, default=True, remember=None)
 
         ap_path = var.prompt(
             'AP_PATH', 'Do you have a set of alternate wifi credentials you would like to add?\n  (Read more at https://github.com/beasteers/netswitch) \nWhat is their path?', '', update=False)

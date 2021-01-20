@@ -5,10 +5,16 @@ from . import util
 from . import wifi
 
 
-def ssh_file(path):
-    print('*** Enabling SSH. ***')
-    util.touch(os.path.join(path, 'ssh'))
-    print()
+def flag_file(path, name, flag=True):
+    path = os.path.join(path, name)
+    if flag:
+        print('*** Enabling {}. ***'.format(name))
+        util.touch(path)
+        print()
+    elif os.path.isfile(path):
+        print('*** Removing {}. ***'.format(name))
+        os.remove(path)
+        print()
 
 DEFAULT_SD_PATH = '/Volumes/boot'
 

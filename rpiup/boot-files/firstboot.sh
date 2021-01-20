@@ -1,11 +1,15 @@
 #!/bin/bash
 
+# THIS STARTS AN ANONYMOUS FUNCTION TO REDIRECT ALL OUTPUT TO FILE
+{
+# ----------------------------------------------------------------
+
 # expand empty glob to empty string, not original pattern
 shopt -s nullglob
 
 UTILS_FILE='/boot/boot-utils.sh'
 . $UTILS_FILE
-echo ". $UTILS_FILE" >> /etc/bash.bashrc
+echo ". $UTILS_FILE" >> /etc/profile.d/firstboot.sh
 
 
 # if we've already finished, exit.
@@ -19,25 +23,40 @@ fi
 # Setup
 ########################################
 
+# create a general workspace
+mkdir -p /etc/firstboot
+cd /etc/firstboot
+
 status.update start ip=$(localip)
 
-# make sure the date is right
-date -s "$(wget -qSO- --max-redirect=0 google.com 2>&1 | grep Date: | cut -d' ' -f5-8)Z"
 
-status.update pull-correct-time
+# make sure the date is right
+
+if [ -z "$(status.list correct-time)" ]; then
+    date -s "$(wget -qSO- --max-redirect=0 google.com 2>&1 | grep Date: | cut -d' ' -f5-8)Z"
+    status.update correct-time
+fi
 
 
 # run custom setup
 
 if [ -z "$(status.list setup-before)" ]; then
-    mayberun /boot/resources/setup-before.sh
-    status.update custom-setup-before
+    exec.maybe /boot/resources/setup-before.sh
+    status.update setup-before
 fi
+
+for f in /boot/resources/.internal/pre-scripts/*.sh; do
+    _id=$(basename "${f%.*}")
+    if [ -z "$(status.list addon-pre-$_id)" ]; then
+        exec.maybe "$f"
+        status.update addon-pre-$_id
+    fi
+done
 
 
 # create user
 
-if [ -z "$(status.list new-user)" ]; then
+if [ -z "$(status.list update-user)" ]; then
     echo.section "Setting user to $USERNAME:$PASSWORD ..."
     if [ ! -z "$USERNAME" ] && [ ! -d "/home/$USERNAME" ]; then
         adduser --disabled-password --gecos '' $USERNAME
@@ -53,23 +72,26 @@ if [ -z "$(status.list new-user)" ]; then
         bootvars.remove PASSWORD
     fi
 
-    status.update new-user
+    status.update update-user
 fi
 
 
 # set hostname
 
 if [ -z "$(status.list hostname)" ]; then
+
     FIRSTBOOT_HOSTNAME=${FIRSTBOOT_HOSTNAME:-firstboot_hostname}  # deprecate old
     if [ -z "$FIRSTBOOT_HOSTNAME" ]; then
         MAC=$(cat /sys/class/net/eth0/address | sed 's/://g')
         HOSTNAME_PREFIX="${HOSTNAME_PREFIX:-${APP_NAME}node}"
         FIRSTBOOT_HOSTNAME="${HOSTNAME_PREFIX}-${MAC}"
     fi
+
     echo.section "Setting hostname to $FIRSTBOOT_HOSTNAME ..."
 
+    CURRENT_HOSTNAME=$(hostname)
     echo "$FIRSTBOOT_HOSTNAME" > /etc/hostname
-    sed -i "s/raspberrypi/$FIRSTBOOT_HOSTNAME/g" /etc/hosts
+    sed -i "s/$CURRENT_HOSTNAME/$FIRSTBOOT_HOSTNAME/g" /etc/hosts
     hostname "$FIRSTBOOT_HOSTNAME"
 
     status.update hostname
@@ -78,11 +100,8 @@ fi
 
 # set raspi-config defaults (0=yes, 1=no ??idk why)
 
-if [ -z "$(status.list raspi-config)" ]; then
-    raspi-config nonint do_boot_wait 1
-    raspi-config nonint do_i2c 0
-    raspi-config nonint do_boot_splash 0
-
+#define CHANGE_PASSWD   "(echo \"%s\" ; echo \"%s\" ; echo \"%s\") | passwd"
+if [ -z "$(status.list system-config)" ]; then
     # set country - TODO will country/keyboard be the same ???
     COUNTRY=${COUNTRY:-US}
     KEYBOARD=$(echo ${KEYBOARD:-$COUNTRY} | awk '{print tolower($0)}')
@@ -91,26 +110,22 @@ if [ -z "$(status.list raspi-config)" ]; then
 
     echo "ClientAliveInterval 30" >> /etc/ssh/sshd_config
 
-    status.update raspi-config
-fi
-
-
-if [ -z "$(status.list etc)" ]; then
     # set network interfaces
     cp.backup /boot/resources/network_interfaces /etc/network/interfaces
     # set fstab
     cp.backup /boot/resources/fstab /etc/fstab
 
-    status.update etc
+    status.update system-config
 fi
 
 
+# installs
+
 if [ -z "$(status.list installs)" ]; then
-    # install htop wavemon
     echo.section "Installing core packages..."
     apt-get update
 
-    # # set date and timezone
+    # # set timezone
     apt-get install -y jq && \
         timedatectl set-timezone "$(curl -s http://ip-api.com/json/$(curl -s ifconfig.me) | jq -r .timezone 2>&1)"
 
@@ -122,25 +137,40 @@ if [ -z "$(status.list installs)" ]; then
     fi
     if [ ! -z "$GIT_PASSWORD" ]; then
         git config --global user.password "$GIT_PASSWORD"
-        # bootvars.remove GIT_PASSWORD
+        bootvars.remove GIT_PASSWORD
     fi
 
     status.update installs
 fi
 
 
-# set splash image
-if [ -f /boot/resources/splash.png ]; then
-    echo.section "Installing splash image..."
-    apt-get install -y fbi
-    cp.backup /boot/resources/.internal/splashscreen.service /etc/systemd/system/splashscreen.service
-    systemctl enable splashscreen
-    # systemctl start splashscreen
+# openvpn
+
+if [ -z "$(status.list vpn)" ]; then
+
+    VPNDIR=/boot/resources/vpn
+    exec.maybe "$VPNDIR/setup.sh"
+
+    if [ ! -z $(find.matching $VPNDIR'/*.conf') ]; then
+        echo.section "Installing openvpn client..."
+
+        apt-get install -y openvpn
+        sudo systemctl daemon-reload
+
+        lineinfile.match '^\s*AUTOSTART=' 'AUTOSTART="all"' /etc/default/openvpn
+
+        for f in $VPNDIR"/*.conf"; do
+            _id=$(basename "${f%.*}")  # get file base stem
+            mv "$f" /etc/openvpn/${_id}.conf
+            sudo systemctl restart openvpn@${_id} && systemctl enable openvpn@${_id}
+        done
+        status.update vpn
+    fi
 fi
-# cp.backup /boot/resources/splash.png /usr/share/plymouth/themes/pix/splash.png
 
 
 # install python 3 and make it the default
+
 if [ -z "$(status.list install-python)" ]; then
     echo.section "Installing Python 3..."
 
@@ -148,35 +178,72 @@ if [ -z "$(status.list install-python)" ]; then
     update-alternatives --install /usr/bin/python python /usr/bin/python3 4
     update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1
     update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 4
-    /usr/bin/python3 -m pip install -U pip setuptools
+    pip install -U pip setuptools
 
     status.update install-python
 fi
 
+# raspi-config
+
+if [ -z "$(status.list raspi-config)" ]; then
+    raspi-config nonint do_boot_wait 1
+    raspi-config nonint do_i2c 0
+    raspi-config nonint do_serial 0
+    if [ -f /boot/i2smic ]; then
+        pip install --upgrade adafruit-python-shell
+        curl -sSL https://raw.githubusercontent.com/beasteers/Raspberry-Pi-Installer-Scripts/i2smic-nonint-patch-1/i2smic.py -o i2smic.py
+        python i2smic.py -autoload -noreboot
+    fi
+    status.update raspi-config
+fi
+
+
+# set splash image
+
+if [ -f /boot/resources/splash.png ]; then
+    if [ -z "$(status.list splash)" ]; then
+        echo.section "Installing splash image..."
+        apt-get install -y fbi
+        # cp.backup /boot/resources/splash.png /usr/share/plymouth/themes/pix/splash.png
+        cp.backup /boot/resources/.internal/splashscreen.service /etc/systemd/system/splashscreen.service
+        systemctl enable splashscreen
+        # systemctl start splashscreen
+        raspi-config nonint do_boot_splash 0
+        status.update splash
+    fi
+fi
+
 
 # upgrade wifi device
+
 if [ -z "$(status.list wifi-drivers)" ]; then
-    echo.section "Installing wifi devices..."
+    # # available: 8188eu|8188fu|8192eu|8192su|8812au|8821cu|8822bu|mt7610|mt7612
+    # DEFAULT_INSTALL_WIFI=("8188eu" "8192eu" "8812au")
+    # INSTALL_WIFI=("${INSTALL_WIFI[@]:-${DEFAULT_INSTALL_WIFI[@]}}")
 
-    wget http://downloads.fars-robotics.net/wifi-drivers/install-wifi -O /usr/bin/install-wifi
-    chmod +x /usr/bin/install-wifi
-    install-wifi -u 8188eu && install-wifi -u 8192eu && install-wifi -u 8812au
-    apt-get install -y firmware-ralink
+    if [ ! -z $INSTALL_WIFI ]; then
+        echo.section "Installing wifi devices..."
+        apt-get install -y firmware-ralink
 
-    status.update wifi-drivers
+        wget http://downloads.fars-robotics.net/wifi-drivers/install-wifi -O /usr/bin/install-wifi
+        chmod +x /usr/bin/install-wifi
+        for wifiid in "${INSTALL_WIFI[@]}"; do
+            install-wifi -u "$wifiid"
+        done
+
+        status.update wifi-drivers
+    fi
 fi
 
 
 # install docker, docker-compose
+
 if [ -z "$(status.list docker)" ]; then
     echo.section "Installing docker..."
 
     if [ $BALENA_ENGINE -eq 1 ]; then
-        . /boot/resources/.internal/balena-engine-install
-        _balen_url='https://gist.githubusercontent.com/beasteers/5a2b69e0b486d57039a52f5ee205cea8/raw/ceab766069dabeba16352f5012f6f26e30cae094/balena-engine-install.sh'
+        _balen_url='https://gist.githubusercontent.com/beasteers/5a2b69e0b486d57039a52f5ee205cea8/raw/balena-engine-install.sh'
         curl -sSL $_balen_url | sh
-        bashrc.add 'export DOCKER_HOST=unix:///var/run/balena-engine.sock'
-        bashrc.add 'alias docker=balena-engine'
     else
         curl -sSL https://get.docker.com | sh
     fi
@@ -191,23 +258,25 @@ fi
 
 
 # install systemctl services
+
 if [ -z "$(status.list systemctl-services)" ]; then
     echo.section "Installing any systemctl services..."
 
     CWD=$(pwd)
     for svc_dir in /boot/resources/services/*; do
-        cd "$svc_dir"
-        [ -f "./install.sh" ] && ./install.sh
+        [ -d "$svc_dir" ] && cd "$svc_dir" || continue
+        [ -f "./setup.sh" ] && (./setup.sh || continue)
 
         # start
         svc_name=$(basename "$svc_dir")
+        f=${svc_name}.service
+        [ -f "$f" ] && (cp "$f" "/etc/systemd/system/$f" || continue)
+
         echo "starting service "$svc_name" and setting to run on boot..."
-        systemctl enable "$svc_name"
-        systemctl start "$svc_name"
+        systemctl start "$svc_name" && systemctl enable "$svc_name"
         echo 'done.'
         sleep 1
         systemctl status "$svc_name"
-        exit 0
     done
     cd "$CWD"
 
@@ -216,13 +285,14 @@ fi
 
 
 # install docker containers
+
 if [ -z "$(status.list docker-compose)" ]; then
     echo.section "Installing any docker containers..."
 
     CWD=$(pwd)
     for svc_dir in /boot/resources/docker/*; do
-        touchlap "docker-$(basename "$svc_dir")"
-        cd "$svc_dir"
+        [ -d "$svc_dir" ] && cd "$svc_dir" || continue
+        [ -f "./setup.sh" ] && (./setup.sh || continue)
         docker-compose up -d
     done
     cd "$CWD"
@@ -232,13 +302,30 @@ fi
 
 
 # run custom setup
+
+for f in /boot/resources/.internal/scripts/*.sh; do
+    _id=$(basename "${f%.*}")
+    if [ -z "$(status.list addon-$_id)" ]; then
+        exec.maybe "$f"
+        status.update addon-$_id
+    fi
+done
+
 if [ -z "$(status.list custom-setup)" ]; then
-    mayberun /boot/resources/setup.sh
+    exec.maybe /boot/resources/setup.sh
     status.update custom-setup
 fi
+
+
+# close up
 
 echo.section "Done! Enjoy!! Don't be evil. **Do** topple capitalism. :D"
 status.update "done"
 
 # sleep 5
 # reboot
+
+
+# THIS CREATES AN ANONYMOUS FUNCTION TO REDIRECT ALL OUTPUT TO FILE
+} &> /var/log/firstboot.log
+# -----------------------------------------------------------------
