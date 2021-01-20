@@ -3,7 +3,9 @@ import re
 import subprocess
 
 
-DEFAULT_SRC = os.path.abspath(os.path.join(os.path.dirname(__file__), 'boot-files'))
+DEFAULT_BASE = os.path.abspath(os.path.dirname(__file__))
+DEFAULT_SRC = os.path.join(DEFAULT_BASE, 'boot-files')
+ADDONS_SRC = os.path.join(DEFAULT_BASE, 'addons')
 
 
 def count(start=0, end=None, step=1):

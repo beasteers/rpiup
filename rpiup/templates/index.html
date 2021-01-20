@@ -1,5 +1,15 @@
 <html>
 <head>
+    <!-- Wireless by Eucalyp from the Noun Project -->
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='favicon/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon/favicon-16x16.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='favicon/site.webmanifest') }}">
+    <link rel="mask-icon" href="{{ url_for('static', filename='favicon/safari-pinned-tab.svg') }}" color="#5bbad5">
+    <meta name="msapplication-TileColor" content="#da532c">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee+Shade&family=B612+Mono&display=swap" rel="stylesheet">
 
 <style>
 
@@ -12,32 +22,47 @@ body {
     background-color: #030005;
     background: linear-gradient(purple 0%, red 90%),
         linear-gradient(to right, purple 0%, yellow 90%),
-        url('https://pixnio.com/free-images/2017/03/23/2017-03-23-12-34-28-725x307.jpg')
+        url("{{ url_for('static', filename='images/2017-03-23-12-34-28-725x307.jpg') }}")
         no-repeat center center fixed;
     -webkit-background-size: cover;
     -moz-background-size: cover;
     -o-background-size: cover;
     background-size: cover;
     background-blend-mode: darken;
-    font-family: Monaco; /*Trebuchet MS, */
+    font-family: 'B612 Mono', monospace; /*Trebuchet MS, */
     font-size: 0.75em;
 }
-body > h1 {
-    font-size: 3.5em;
-    font-weight: 400;
-    /* mix-blend-mode: lighten; */
-    color: #ffffff26;
+
+header {
+    max-width: 700px;
+    width: 100%;
+    text-align: center;
 }
+
+h1 {
+    margin: 0.2em 0;
+    font-family: 'Bungee Shade', monospace;
+    font-size: 6em;
+    font-weight: 400;
+    color: #ffffff99;
+    letter-spacing: .1em;
+    text-shadow: #ffffff99 0px 0px 5px, #ffffff99 0px 0px 10px, #ffffff99 0px 0px 15px,
+                 #ff2d95d1 0px 0px 20px, #ff2d95d1 0px 0px 30px, #ff2d95d1 0px 0px 40px,
+                 #ff2d95d1 0px 0px 50px, #ff2d95d1 0px 0px 75px;
+    white-space: nowrap;
+}
+
 
 #status {
     background: #000000d9;
     color: white;
-    background-blend-mode: darken;
+    /* background-blend-mode: darken; */
     border-radius: 5px;
-    max-width: 700px;
+    max-width: 800px;
+    max-width: 100%;
     overflow: auto;
     padding: 3em;
-    margin: 1em 0.5em;
+    margin: 1em 1em;
     display: flex;
     flex-direction: column;
     position: relative;
@@ -49,6 +74,17 @@ body > h1 {
     background: #ffffff08;
     padding: 1.2em 0.7em 0.7em;
     overflow: auto;
+    border: 1px solid #ffffff9e;
+}
+#status .device-wrapper {
+    position: relative;
+}
+#status .device-wrapper .device-meta {
+    position: absolute;
+    top: 0;
+    transform: translate(0, -50%);
+    background: #714977;
+    font-size: 0.9em;
 }
 #status .device.done {
     border-left: 2px solid #70ff9f;
@@ -56,14 +92,15 @@ body > h1 {
 
 #status .device > div {
     padding: 0.2em;
+    margin: 0.6em 0;
 }
 
-.pill {
+.pill, .device-meta {
     border-radius: 10px;
     margin: 0.1em 0.6em;
     padding: 0.2em 0.7em;
-    background: #10174a;
-    font-style: italic;
+    background: #228ea0;
+    /* font-style: italic; */
 }
 
 
@@ -105,15 +142,28 @@ body > h1 {
   cursor: pointer;
 }
 
-</style>
+.fittyfade {
+    transition: opacity 0.7s ease-in-out;
+}
+.fittyfade-hidden {
+    opacity: 0;
+}
 
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/blob.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cash/8.1.0/cash.min.js" integrity="sha512-sgDgZX/GgfD7qSeMjPN/oE9EQgXZJW55FIjdexVT60QerG2gAWhR9QDQEGt3O90Dy9jVcwMWsoTMhLgldIiKXw==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fitty/2.3.3/fitty.min.js" integrity="sha512-Qsfv/rVSIXtsKH4882nlkrR362m2+UO/14uqlSPUF7pgF1shkhXcWT5sMMixzpoysR+OEtcf+nn3YwUHr3kWqA==" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/visibility.js/1.2.4/visibility.min.js" integrity="sha512-CxGjTNaxpFq6jbg35mqGrfKEpHSBDw19EVpHAbEq1zkDN07m5NxFQj8s2URnmWUB4akScjCb/QthLyvl2wVAWg==" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.5.0/fetch.min.js" integrity="sha512-TXERecoxO85MPkCFqSG3LSe5nVimbZddhrPP2PwSMH5C5+kIoXi30bm1RgBckHQMkNCZN/i5FvHIvJuytp6ECw==" crossorigin="anonymous"></script>
+<script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/fetch/3.5.0/fetch.min.js" integrity="sha512-TXERecoxO85MPkCFqSG3LSe5nVimbZddhrPP2PwSMH5C5+kIoXi30bm1RgBckHQMkNCZN/i5FvHIvJuytp6ECw==" crossorigin="anonymous"></script>
 
 </head>
 
 <body>
-    <h1>Device Provisioning</h1>
+    <header>
+        <h1 id="heading">Devices</h1>
+        <h4>These are devices that have reported back from their RPIUP scripts.</h4>
+        <p id="current-time"></p>
+    </header>
     <!-- <div id='msg'> this is a test message</div> -->
     <div id='status'>
         <span id='pulse'></span>
@@ -121,8 +171,54 @@ body > h1 {
         <!-- <a href="#" class="button">Clear All</a> -->
     </div>
 
+    <!-- https://codepen.io/cassie-codes/pen/zWJxXj -->
+    <svg class="blobCont">
+        <image xlink:href="{{ url_for('static', filename='images/jr-korpa-SFT9G3pAxLY-unsplash.jpg') }}" mask="url(#mask)" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
+      <defs>
+      <filter id="gooey" height="130%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="30" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 95 -40" result="goo" />
+        </filter>
+    </defs>
+            <mask id="mask" x="0" y="0">
+                <g style="filter: url(#gooey)">
+          <circle class="blob" cx="10%" cy="10%" r="80" fill="white" stroke="white"/>
+                    <circle class="blob" cx="50%" cy="10%" r="40" fill="white" stroke="white"/>
+                    <circle class="blob" cx="17%" cy="15%" r="70" fill="white" stroke="white"/>
+                    <circle class="blob" cx="90%" cy="20%" r="120" fill="white" stroke="white"/>
+                    <circle class="blob" cx="30%" cy="25%" r="30" fill="white" stroke="white"/>
+          <circle class="blob" cx="50%" cy="60%" r="80" fill="white" stroke="white"/>
+                    <circle class="blob" cx="70%" cy="90%" r="10" fill="white" stroke="white"/>
+                    <circle class="blob" cx="90%" cy="60%" r="90" fill="white" stroke="white"/>
+                    <circle class="blob" cx="30%" cy="90%" r="80" fill="white" stroke="white"/>
+          <circle class="blob" cx="10%" cy="10%" r="80" fill="white" stroke="white"/>
+                    <circle class="blob" cx="50%" cy="10%" r="20" fill="white" stroke="white"/>
+                    <circle class="blob" cx="17%" cy="15%" r="70" fill="white" stroke="white"/>
+                    <circle class="blob" cx="40%" cy="20%" r="120" fill="white" stroke="white"/>
+                    <circle class="blob" cx="30%" cy="25%" r="30" fill="white" stroke="white"/>
+          <circle class="blob" cx="80%" cy="60%" r="80" fill="white" stroke="white"/>
+                    <circle class="blob" cx="17%" cy="10%" r="100" fill="white" stroke="white"/>
+                    <circle class="blob" cx="40%" cy="60%" r="90" fill="white" stroke="white"/>
+                    <circle class="blob" cx="10%" cy="50%" r="80" fill="white" stroke="white"/>
+                </g>
+            </mask>
+    </svg>
+
 
     <script>
+    function fittyfade(select, options) {
+        $(select).addClass('fittyfade')
+        $(select).addClass('fittyfade-hidden')
+        setTimeout(function () {
+            $(select).removeClass('fittyfade-hidden')
+            fitty(select, );
+        }, 400)
+    }
+    fittyfade('#heading', {
+      minSize: 12,
+      maxSize: 300
+    })
+
     var statusdiv = document.getElementById('status-inner');
     var msg = document.getElementById('msg');
 
@@ -136,7 +232,7 @@ body > h1 {
         })
     }
     run()
-    setInterval(run, 5000);
+    // setInterval(run, 5000);
 
     var pulseel = document.getElementById('pulse');
     function pulse() {
@@ -155,6 +251,11 @@ body > h1 {
             setTimeout(function() { msg.style.display = 'none'; });
         })
     }
+
+    var currenttime = document.getElementById('current-time');
+    function settime() { currenttime.innerHTML = (new Date()).toLocaleTimeString(); }
+    settime()
+    setInterval(settime, 1000);
     </script>
 
 </body>

@@ -4,6 +4,7 @@ import yaml
 import datetime
 # import filelock
 import sqlitedict
+import timeago
 
 
 PORT = 8056
@@ -95,7 +96,7 @@ def statusyaml():
 
 @app.route('/status/text')
 def statustext():
-    done, running = split_cond(DEVICES.items(), lambda x: any(x.endswith('done') for x in x[1]['steps']))
+    done, running = split_cond(DEVICES.items(), lambda x: any(x['name'].endswith('done') for x in x[1]['steps']))
 
     return flask.jsonify({'body': '''{}'''.format(
         '\n'.join(
@@ -116,18 +117,20 @@ tag = lambda _tag, *content, **kw: '<{tag} {attrs}>{content}</{tag}>'.format(
     ))
 
 tagmap = lambda _tag, *content, **kw: ''.join(tag(_tag, c, **kw) for c in content if c)
-pill = lambda x, name=None: tag('span', name, name and ':', x) if x else ''
+pill = lambda x, name=None: tag('span', name, name and ':', x, c='pill') if x else ''
 
 
 def devicehtml(name, steps, last_updated=None, done=False, attrs=None):
-    return '<div class="device {}">{}</div>'.format(
-        'done' if done else '',
-        ''.join(tag('div', l) for l in [
-            tag('span', name) + pill(attrs.get('ip'), 'ip'),
-            tag('span', last_updated),
-            ' | '.join(tag('span', s) for s in steps[::-1]),
-            ''.join(pill(v, k) for k, v in attrs.items() if k != 'ip'),
-        ]))
+    return tag('div',
+        tag('div', tag('span', format_dt(last_updated)), c='device-meta pill'),
+        tag('div', *(
+            tag('div', l) for l in [
+                tag('span', name) + pill(attrs.get('ip'), 'ip'),
+                ' | '.join(pill(s['name']) for s in steps[::-1]),
+                ''.join(pill(v, k) for k, v in attrs.items() if k != 'ip'),
+            ]),
+            c=('device', 'done' if done else None)),
+        c='device-wrapper')
 
 
 def split_cond(xs, cond):
@@ -136,6 +139,16 @@ def split_cond(xs, cond):
         groups.setdefault(cond(x), []).append(x)
     return [groups.get(k, []) for k in (True, False)] if not set(groups) - set((True, False)) else groups
 
+
+def format_dt(dt, out_fmt='%H:%M:%S', in_fmt='%Y-%m-%d %H:%M:%S.%f'):
+    if dt:
+        if not isinstance(dt, datetime.datetime):
+            dt = datetime.datetime.strptime(dt, in_fmt)
+        dt = '{} ({})'.format(
+            timeago.format(dt, datetime.datetime.now()),
+            dt.strftime(out_fmt),
+        )
+    return dt
 
 
 '''
@@ -146,14 +159,14 @@ Pages
 
 
 
-@app.route('/watch')
+@app.route('/')
 def watch():
     # the most basic we can get
-    return flask.render_template('index.html')
+    return flask.render_template('index.html', title='Devices')
 
-@app.route('/')
-def index():
-    return flask.jsonify({'message': "Welcome! Let's set up some devices!"})
+# @app.route('/')
+# def index():
+#     return flask.jsonify({'message': "Welcome! Let's set up some devices!"})
 
 
 import traceback
@@ -167,6 +180,10 @@ def handle_exception(e):
             err=e, tb='<hr/>'.join(traceback.format_tb(e.__traceback__)).strip('\n'),
             typename=type(e).__name__)
     }), 500
+
+@app.route('/favicon.ico')
+def favicon():
+    return app.send_static_file('favicon/favicon.ico')
 
 
 '''

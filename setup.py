@@ -6,10 +6,10 @@ USERNAME = 'beasteers'
 NAME = 'rpiup'
 
 
-def get_pkg_files(name, pattern):
+def get_pkg_files(name, *pattern):
     return [
-        os.path.relpath(f, name) for f in glob.glob(
-            os.path.join(os.path.dirname(__file__), name, pattern), recursive=True)
+        os.path.relpath(f, name) for f in
+        glob.glob(os.path.join(os.path.dirname(__file__), name, *pattern), recursive=True)
     ]
 
 
@@ -24,11 +24,15 @@ setuptools.setup(
     url='https://github.com/{}/{}'.format(USERNAME, NAME),
     packages=setuptools.find_packages(),
     package_data={
-        NAME: get_pkg_files(NAME, 'boot-files/**/*') + get_pkg_files(NAME, 'addons/*') + get_pkg_files(NAME, 'templates/*')},
+        NAME: (
+            get_pkg_files(NAME, 'boot-files/**/*') +
+            get_pkg_files(NAME, 'addons/*') +
+            get_pkg_files(NAME, 'templates/*')
+        )},
     entry_points={'console_scripts': ['{name}={name}:cli'.format(name=NAME)]},
     install_requires=['fire'],
     extras_require={
-        'monitor': ['flask', 'sqlitedict', 'PyYAML'],
+        'monitor': ['flask', 'sqlitedict', 'PyYAML', 'timeago'],
     },
     license='BSD 3-Clause Clear License',
     keywords='raspberrypi raspberry pi os firstboot setup boot partition install iot fleet')

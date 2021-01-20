@@ -30,5 +30,5 @@ cd /etc/firstboot
 status.update start ip=$(localip)
 
 # THIS CREATES AN ANONYMOUS FUNCTION TO REDIRECT ALL OUTPUT TO FILE
-} &> /var/log/firstboot.log
+} &> /boot/firstboot.log
 # -----------------------------------------------------------------

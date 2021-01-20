@@ -7,13 +7,13 @@ from . import os
 from . import sd
 from . import varsfile
 from . import wifi
-from .util import DEFAULT_SRC
+from .util import DEFAULT_SRC, ADDONS_SRC
 
 
 DEFAULT_PATH = '.'
 
 def init(name=None, path=None, ssid=None, psk=None, user=None, password=None,
-         git_user=None, git_password=None, src=None, ssh=True, boot_script='full-docker'):
+         git_user=None, git_password=None, src=None, ssh=True, addons=None, boot_script='full-docker'):
     '''Copy over files. Interactive setup?'''
     path = path or name or DEFAULT_PATH
     print('''
@@ -53,13 +53,18 @@ And then eject the SD card and put it in your pi!
         util.copytree(DEFAULT_SRC, path, overwrite=False)
         if src:
             util.copytree(src, path, overwrite=True)
+        if addons:
+            for addon in addons.split(',') if isinstance(addons, str) else addons:
+                print('Applying addon:', addon)
+                util.copytree(os_.path.join(ADDONS_SRC, addon), path, overwrite=True)
+            print()
 
         # set app name
         name = name or os_.path.basename(os_.path.abspath(path)) or ''
         var = varsfile.Vars(os_.path.join(path, 'resources'))
         if len(var.config):
             print('current variables:', set(var.config), '\n')
-        var.prompt('APP_NAME', 'What is the app name?', name)
+        name = var.prompt('APP_NAME', 'What is the app name?', name)
         var.prompt('USERNAME', 'What should the device username be?', name, user)
         var.prompt('PASSWORD', 'What should the device password be?', '', password, secret=True)
 
