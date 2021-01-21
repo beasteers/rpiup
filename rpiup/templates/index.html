@@ -1,5 +1,6 @@
 <html>
 <head>
+    <title>{{ title | default('Devices') }} | RPIUP</title>
     <!-- Wireless by Eucalyp from the Noun Project -->
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='favicon/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon/favicon-32x32.png') }}">
@@ -173,7 +174,7 @@ h1 {
 
     <!-- https://codepen.io/cassie-codes/pen/zWJxXj -->
     <svg class="blobCont">
-        <image xlink:href="{{ url_for('static', filename='images/jr-korpa-SFT9G3pAxLY-unsplash.jpg') }}" mask="url(#mask)" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
+        <image xlink:href="{{ url_for('static', filename='images/jr-korpa-fCkhpN8dI1M-unsplash.jpg') }}" mask="url(#mask)" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
       <defs>
       <filter id="gooey" height="130%">
                 <feGaussianBlur in="SourceGraphic" stdDeviation="30" result="blur" />
